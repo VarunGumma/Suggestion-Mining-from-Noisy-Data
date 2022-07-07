@@ -1,38 +1,33 @@
+from transformers import RobertaTokenizerFast, BertTokenizerFast
 from ast import literal_eval
-import pandas as pd
-from tensorflow.keras.utils import pad_sequences
-from nltk.tokenize import TreebankWordTokenizer, TweetTokenizer, MWETokenizer
+from pandas import read_csv
+
+def _extend_labels(L, text, labels, tokenizer):
+    X = 5
+    extended_labels = [X]
+    for (t, l) in zip(text, labels):
+        n = len(tokenizer.tokenize(t))
+        extended_labels.extend([l] * n)
+    rem = L - len(extended_labels)
+    extended_labels.extend([X] * rem)
+    return extended_labels
 
 
-def get_encoded_input(fname, tag2idx=None, max_len=256, vocab=None, visualize=False, tokenizer_name="tree_bank"):
-    B, I, O, E, S, X = range(6)
-
+def get_encoded_input(fname, tag2idx, tokenizer_name="roberta-base"):
+    data = read_csv(fname, sep=' ', header=None).values.tolist()
     tokenizer = {
-        "tree_bank": TreebankWordTokenizer(),
-        "tweet": TweetTokenizer(),
-        "mwe": MWETokenizer(),
+        "roberta-base": RobertaTokenizerFast.from_pretrained("roberta-base", do_lower_case=True, add_prefix_space=True),
+        "bert-base-uncased": BertTokenizerFast.from_pretrained("bert-base-uncased", do_lower_case=True),
     }[tokenizer_name]
 
-    data = pd.read_csv(fname, 
-                       sep=" ", 
-                       header=None, 
-                       encoding="utf-8").values.tolist()
-
-    inv_vocab = {v:k for (k, v) in enumerate(vocab)}
-    text = [' '.join(literal_eval(words)) for (words, _, _) in data]
-    text = [['<S>'] + tokenizer.tokenize(s) + ['</S>'] for s in text]
-
-    if visualize:
-        df = pd.DataFrame([len(s) for s in text], columns=["seq_len"])
-        print(df["seq_len"].describe(percentiles=[0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 0.999, 0.9999]))
-
-    text_padded = pad_sequences([[inv_vocab[w] for w in sent] for sent in text], 
-                                maxlen=max_len,
-                                padding="post", 
-                                truncating="post",
-                                value=inv_vocab["<PAD>"])
-
+    text = [literal_eval(words) for (words, _, _) in data]
     labels = [[tag2idx[l.split('-')[0]] for l in literal_eval(labels)] for (_, labels, _) in data]
-    attention_masks = [([1]*len(t) + [0]*(text_padded.shape[1] - len(t)))[:max_len] for t in text]
-    labels = [([X] + l + [X]*(text_padded.shape[1] - len(l) - 1))[:max_len] for l in labels]
-    return text_padded, attention_masks, labels
+    ext_text = tokenizer(text, 
+                         padding="longest",
+                         return_attention_mask=True,
+                         is_split_into_words=True,
+                         return_length=True)
+
+    max_len = ext_text["length"][0]
+    ext_labels = [[l for l in _extend_labels(max_len, txt, lbl, tokenizer)] for (txt, lbl) in zip(text, labels)]
+    return ext_text, ext_labels
