@@ -1,4 +1,5 @@
 from ast import literal_eval
+from pandas import read_csv
 from nltk.tokenize import TreebankWordTokenizer, TweetTokenizer, MWETokenizer
 
 def post_pad_sequences(sequences, max_len=None, pad_value=0):
@@ -18,10 +19,7 @@ def get_encoded_input(fname, tag2idx=None, max_len=256, vocab=None, tokenizer_na
         "mwe": MWETokenizer(),
     }[tokenizer_name]
 
-    data = pd.read_csv(fname, 
-                       sep=" ", 
-                       header=None, 
-                       encoding="utf-8").values.tolist()
+    data = read_csv(fname, sep=" ", header=None, encoding="utf-8").values.tolist()
 
     inv_vocab = {v:k for (k, v) in enumerate(vocab)}
     text = [tokenizer.tokenize(' '.join(literal_eval(words))) for (words, _, _) in data]
