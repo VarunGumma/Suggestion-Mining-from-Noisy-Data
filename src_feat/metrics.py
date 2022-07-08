@@ -2,7 +2,7 @@ import numpy as np
 from re import finditer
 
 PATTERN = "S|B+I*E+"
-f = lambda S: ''.join(["BIOESX"[i] for i in S])
+f = lambda S: ''.join(["BIOES<>$"[i] for i in S])
 
 def _compute(y_true, y_pred, value="recall"):
     y_true, y_pred = f(y_true), f(y_pred)

@@ -2,17 +2,19 @@ from ast import literal_eval
 from pandas import read_csv
 from nltk.tokenize import TreebankWordTokenizer, TweetTokenizer, MWETokenizer
 
-def post_pad_sequences(sequences, max_len=None, pad_value=0):
-    longest = max([len(x) for x in sequences])
-    if max_len is not None and max_len > longest:
-        print("Unnecessary extra padding detected!\nSequences will be only be padded to the longest length")
-    sequences = [(x + [pad_value]*(longest-len(x))) for x in sequences]
-    return sequences if max_len is None or max_len >= longest else [x[:max_len] for x in sequences]
+
+def post_pad_sequences(sequences, maxlen=None, start="<START>", end="<END>", pad="<PAD>", return_masks=True):
+    L = max([len(x) for x in sequences])
+    if maxlen is None or maxlen-2 > L:
+        seq = [([start] + x + [end] + [pad]*(L-len(x))) for x in sequences]
+        masks = [([1]*(len(x)+2) + [0]*(L-len(x))) for x in sequences] if return_masks else None
+    else:
+        seq = [([start] + (x[:maxlen-2] if len(x) >= maxlen-2 else x) + [end] + [pad]*(max(maxlen-len(x)-2, 0))) for x in sequences]
+        masks = [([1]*(min(maxlen, len(x)+2)) + [0]*(max(maxlen-len(x)-2, 0))) for x in sequences] if return_masks else None
+    return {"seq": seq, "mask": masks}
     
         
-def get_encoded_input(fname, tag2idx=None, max_len=256, vocab=None, tokenizer_name="tree_bank"):
-    B, I, O, E, S, X = range(6)
-
+def get_encoded_input(fname, tag2idx=None, maxlen=256, vocab=None, tokenizer_name="tree_bank"):
     tokenizer = {
         "tree_bank": TreebankWordTokenizer(),
         "tweet": TweetTokenizer(),
@@ -22,15 +24,14 @@ def get_encoded_input(fname, tag2idx=None, max_len=256, vocab=None, tokenizer_na
     data = read_csv(fname, sep=" ", header=None, encoding="utf-8").values.tolist()
 
     inv_vocab = {v:k for (k, v) in enumerate(vocab)}
+
     text = [tokenizer.tokenize(' '.join(literal_eval(words))) for (words, _, _) in data]
-    labels = [[tag2idx[l.split('-')[0]] for l in literal_eval(labels)] for (_, labels, _) in data]
+    text = post_pad_sequences(text, maxlen=maxlen, return_masks=True)
+    encoded_input = [[inv_vocab[w] for w in sent] for sent in text["seq"]]
+    attention_masks = text["mask"]
 
-    text_padded = post_pad_sequences([[inv_vocab[w] for w in sent] for sent in text],
-                                     max_len=max_len,
-                                     pad_value=inv_vocab["<PAD>"])
+    labels = [[lbl.split('-')[0] for lbl in literal_eval(labels)] for (_, labels, _) in data]
+    labels = post_pad_sequences(labels, maxlen=maxlen, start='<', end='>', pad='$', return_masks=False)
+    extended_labels = [[tag2idx[l] for l in lbls] for lbls in labels["seq"]]
 
-    L = len(text_padded[0])
-
-    attention_masks = [([1]*len(t) + [0]*(L - len(t)))[:max_len] for t in text]
-    labels = [(l + [X]*(L - len(l)))[:max_len] for l in labels]
-    return text_padded, attention_masks, labels
+    return encoded_input, attention_masks, extended_labels
