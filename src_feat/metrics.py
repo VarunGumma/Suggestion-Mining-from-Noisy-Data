@@ -17,8 +17,14 @@ def metric(y_true, y_pred, value="recall"):
     s = np.sum([_compute(yt, yp, value=value) for (yt, yp) in zip(y_true, y_pred)], axis=0)
     return s[0] / (s[1] + 1e-8)
 
+def recall(y_true, y_pred):
+    return metric(y_true, y_pred, value="recall")
+
+def precision(y_true, y_pred):
+    return metric(y_true, y_pred, value="precision")
+
 def f1score(y_true, y_pred):
-    r = metric(y_true, y_pred, value="recall")
-    p = metric(y_true, y_pred, value="precision")
+    r = recall(y_true, y_pred)
+    p = precision(y_true, y_pred)
     f1 = (2 * p * r)/(p + r + 1e-8)
-    return r, p, f1
+    return f1
