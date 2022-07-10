@@ -6,12 +6,12 @@ from nltk.tokenize import TreebankWordTokenizer, TweetTokenizer, MWETokenizer
 def post_pad_sequences(sequences, maxlen=None, start="<START>", end="<END>", pad="<PAD>", return_masks=True):
     L = max([len(x) for x in sequences])
     if maxlen is None or maxlen-2 > L:
-        seq = [([start] + x + [end] + [pad]*(L-len(x))) for x in sequences]
-        masks = [([1]*(len(x)+2) + [0]*(L-len(x))) for x in sequences] if return_masks else None
+        sequences = [([start] + x + [end] + [pad]*(L-len(x))) for x in sequences]
+        masks = [[(0 if x == pad else 1) for x in s] for s in sequences] if return_masks else None
     else:
-        seq = [([start] + (x[:maxlen-2] if len(x) >= maxlen-2 else x) + [end] + [pad]*(max(maxlen-len(x)-2, 0))) for x in sequences]
-        masks = [([1]*(min(maxlen, len(x)+2)) + [0]*(max(maxlen-len(x)-2, 0))) for x in sequences] if return_masks else None
-    return {"seq": seq, "mask": masks}
+        sequences = [([start] + (x[:maxlen-2] if len(x) >= maxlen-2 else x) + [end] + [pad]*(max(maxlen-len(x)-2, 0))) for x in sequences]
+        masks = [[(0 if x == pad else 1) for x in s] for s in sequences] if return_masks else None
+    return {"seq": sequences, "mask": masks}
     
         
 def get_encoded_input(fname, tag2idx=None, maxlen=256, vocab=None, tokenizer_name="tree_bank"):

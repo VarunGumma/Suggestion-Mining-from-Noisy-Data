@@ -23,8 +23,8 @@ def recall(y_true, y_pred):
 def precision(y_true, y_pred):
     return metric(y_true, y_pred, value="precision")
 
-def f1score(y_true, y_pred):
+def f1score(y_true, y_pred, return_precision_recall=True):
     r = recall(y_true, y_pred)
     p = precision(y_true, y_pred)
     f1 = (2 * p * r)/(p + r + 1e-8)
-    return f1
+    return (r, p, f1) if return_precision_recall else f1
