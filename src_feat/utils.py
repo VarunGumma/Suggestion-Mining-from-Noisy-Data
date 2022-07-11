@@ -1,5 +1,4 @@
-from ast import literal_eval
-from pandas import read_csv
+import pandas as pd
 from nltk.tokenize import TreebankWordTokenizer, TweetTokenizer, MWETokenizer
 
 
@@ -21,17 +20,22 @@ def get_encoded_input(fname, tag2idx=None, maxlen=256, vocab=None, tokenizer_nam
         "mwe": MWETokenizer(),
     }[tokenizer_name]
 
-    data = read_csv(fname, sep=" ", header=None, encoding="utf-8").values.tolist()
-
     inv_vocab = {v:k for (k, v) in enumerate(vocab)}
 
-    text = [tokenizer.tokenize(' '.join(literal_eval(words))) for (words, _, _) in data]
+    data = pd.read_csv(fname,
+                       sep=' ',
+                       header=None,
+                       names=['a', 'b', 'c'],
+                       encoding="utf-8",
+                       converters={'a': pd.eval, 
+                                   'b': pd.eval})
+
+    text = [tokenizer.tokenize(' '.join(words)) for words in data['a']]
     text = post_pad_sequences(text, maxlen=maxlen, return_masks=True)
     encoded_input = [[inv_vocab[w] for w in sent] for sent in text["seq"]]
-    attention_masks = text["mask"]
 
-    labels = [[lbl.split('-')[0] for lbl in literal_eval(labels)] for (_, labels, _) in data]
+    labels = [[l.split('-')[0] for l in labels] for labels in data['b']]
     labels = post_pad_sequences(labels, maxlen=maxlen, start='<', end='>', pad='$', return_masks=False)
     extended_labels = [[tag2idx[l] for l in lbls] for lbls in labels["seq"]]
 
-    return encoded_input, attention_masks, extended_labels
+    return encoded_input, text["mask"], extended_labels

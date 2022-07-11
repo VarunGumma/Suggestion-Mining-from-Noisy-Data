@@ -1,6 +1,5 @@
 from transformers import RobertaTokenizerFast, BertTokenizerFast
-from ast import literal_eval
-from pandas import read_csv
+import pandas as pd
 
 def _extend_labels(L, text, labels, tokenizer):
     X = 5
@@ -14,14 +13,22 @@ def _extend_labels(L, text, labels, tokenizer):
 
 
 def get_encoded_input(fname, tag2idx, tokenizer_name="roberta-base"):
-    data = read_csv(fname, sep=' ', header=None).values.tolist()
     tokenizer = {
         "roberta-base": RobertaTokenizerFast.from_pretrained("roberta-base", do_lower_case=True, add_prefix_space=True),
         "bert-base-uncased": BertTokenizerFast.from_pretrained("bert-base-uncased", do_lower_case=True),
     }[tokenizer_name]
 
-    text = [literal_eval(words) for (words, _, _) in data]
-    labels = [[tag2idx[l.split('-')[0]] for l in literal_eval(labels)] for (_, labels, _) in data]
+    data = pd.read_csv(fname,
+                       sep=' ',
+                       header=None,
+                       names=['a', 'b', 'c'],
+                       encoding="utf-8",
+                       converters={'a': pd.eval, 
+                                   'b': pd.eval})
+
+    text = data['a'].tolist()
+    labels = [[tag2idx[l.split('-')[0]] for l in labels] for labels in data['b']]
+
     ext_text = tokenizer(text, 
                          padding="longest",
                          return_attention_mask=True,
@@ -29,5 +36,5 @@ def get_encoded_input(fname, tag2idx, tokenizer_name="roberta-base"):
                          return_length=True)
 
     max_len = ext_text["length"][0]
-    ext_labels = [[l for l in _extend_labels(max_len, txt, lbl, tokenizer)] for (txt, lbl) in zip(text, labels)]
+    ext_labels = [_extend_labels(max_len, txt, lbl, tokenizer) for (txt, lbl) in zip(text, labels)]
     return ext_text, ext_labels
