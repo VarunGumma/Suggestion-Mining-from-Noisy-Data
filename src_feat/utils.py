@@ -35,7 +35,7 @@ def get_encoded_input(fname, tag2idx=None, maxlen=256, vocab=None, tokenizer_nam
     encoded_input = [[inv_vocab[w] for w in sent] for sent in text["seq"]]
 
     labels = [[l.split('-')[0] for l in labels] for labels in data['b']]
-    labels = post_pad_sequences(labels, maxlen=maxlen, start='<', end='>', pad='$', return_masks=False)
-    extended_labels = [[tag2idx[l] for l in lbls] for lbls in labels["seq"]]
+    labels = post_pad_sequences(labels, maxlen=maxlen, start='<', end='>', pad='$', return_masks=False)["seq"]
+    extended_labels = [[tag2idx[l] for l in lbls] for lbls in labels]
 
     return encoded_input, text["mask"], extended_labels
