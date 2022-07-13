@@ -13,15 +13,15 @@ def _compute(y_true, y_pred, value="recall"):
 
 # recall := how many relevent items have been retrieved ?
 # precision := how many retrieved items are relevant ?
-def metric(y_true, y_pred, value="recall"):
+def _generic_metric(y_true, y_pred, value="recall"):
     s = np.sum([_compute(yt, yp, value=value) for (yt, yp) in zip(y_true, y_pred)], axis=0)
     return s[0] / (s[1] + 1e-8)
 
 def recall(y_true, y_pred):
-    return metric(y_true, y_pred, value="recall")
+    return _generic_metric(y_true, y_pred, value="recall")
 
 def precision(y_true, y_pred):
-    return metric(y_true, y_pred, value="precision")
+    return _generic_metric(y_true, y_pred, value="precision")
 
 def f1score(y_true, y_pred, return_precision_recall=True):
     r = recall(y_true, y_pred)
