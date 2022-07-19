@@ -61,7 +61,7 @@ def get_encoded_input(fname,
                                       maxlen=maxlen, 
                                       start=pos_tags2idx['X'], 
                                       end=pos_tags2idx['X'], 
-                                      pad=pos_tags2idx['X'], 
+                                      pad=pos_tags2idx['PAD_AUX'], 
                                       return_masks=False)["seq"]
         return encoded_input, pos_tags, text["mask"], extended_labels
     else:
